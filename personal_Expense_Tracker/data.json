@@ -1,0 +1,66 @@
+{
+    "limits": {
+        "daily": 2500.0,
+        "weekly": 14000.0,
+        "monthly": 60000.0
+    },
+    "categories": [
+        "Food",
+        "Clothes",
+        "Rent",
+        "Travelling",
+        "Lifestyle"
+    ],
+    "day_count": 7,
+    "expenses": {
+        "Day 1": {
+            "Food": 500.0,
+            "Clothes": 100.0,
+            "Rent": 500.0,
+            "Travelling": 200.0,
+            "Lifestyle": 500.0
+        },
+        "Day 2": {
+            "Food": 500.0,
+            "Clothes": 100.0,
+            "Rent": 500.0,
+            "Travelling": 200.0,
+            "Lifestyle": 500.0
+        },
+        "Day 3": {
+            "Food": 500.0,
+            "Clothes": 100.0,
+            "Rent": 500.0,
+            "Travelling": 500.0,
+            "Lifestyle": 1000.0
+        },
+        "Day 4": {
+            "Food": 500.0,
+            "Clothes": 100.0,
+            "Rent": 500.0,
+            "Travelling": 200.0,
+            "Lifestyle": 500.0
+        },
+        "Day 5": {
+            "Food": 500.0,
+            "Clothes": 100.0,
+            "Rent": 500.0,
+            "Travelling": 200.0,
+            "Lifestyle": 500.0
+        },
+        "Day 6": {
+            "Food": 500.0,
+            "Clothes": 100.0,
+            "Rent": 500.0,
+            "Travelling": 200.0,
+            "Lifestyle": 500.0
+        },
+        "Day 7": {
+            "Food": 500.0,
+            "Clothes": 100.0,
+            "Rent": 500.0,
+            "Travelling": 200.0,
+            "Lifestyle": 500.0
+        }
+    }
+}
