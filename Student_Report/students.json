@@ -1,0 +1,54 @@
+{
+    "students": [
+        {
+            "name": "Ayush",
+            "scores": {
+                "Math": 98,
+                "Science": 85,
+                "English": 85,
+                "History": 99,
+                "Computer Science": 87
+            }
+        },
+        {
+            "name": "Nitish",
+            "scores": {
+                "Math": 99,
+                "Science": 95,
+                "English": 85,
+                "History": 70,
+                "Computer Science": 70
+            }
+        },
+        {
+            "name": "Ashish",
+            "scores": {
+                "Math": 60,
+                "Science": 40,
+                "English": 80,
+                "History": 85,
+                "Computer Science": 35
+            }
+        },
+        {
+            "name": "Ahmed",
+            "scores": {
+                "Math": 80,
+                "Science": 80,
+                "English": 90,
+                "History": 95,
+                "Computer Science": 75
+            }
+        },
+        {
+            "name": "Abu",
+            "scores": {
+                "Math": 98,
+                "Science": 95,
+                "English": 80,
+                "History": 85,
+                "Computer Science": 99
+            }
+        }
+    ]
+}
