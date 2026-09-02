@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Aggregator Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Multi-Service Dashboard</h1>
+            <p class="subtitle">Weather · Crypto · News</p>
+        </header>
+
+        <main class="grid">
+            <!-- Weather Section -->
+            <section class="card weather-card">
+                <div class="card-header">
+                    <h2>Weather</h2>
+                    <div class="search-bar">
+                        <input type="text" id="city-input" placeholder="Enter city..." value="London">
+                        <button id="search-btn">Search</button>
+                    </div>
+                </div>
+                <div id="weather-content" class="card-body">
+                    <div class="loader"></div>
+                </div>
+            </section>
+
+            <!-- Crypto Section -->
+            <section class="card crypto-card">
+                <div class="card-header">
+                    <h2>Cryptocurrency</h2>
+                </div>
+                <div id="crypto-content" class="card-body">
+                    <div class="loader"></div>
+                </div>
+            </section>
+
+            <!-- News Section -->
+            <section class="card news-card">
+                <div class="card-header">
+                    <h2>Top Headlines</h2>
+                    <div class="filter-group">
+                        <select id="category-select">
+                            <option value="general">General</option>
+                            <option value="business">Business</option>
+                            <option value="technology">Technology</option>
+                            <option value="science">Science</option>
+                            <option value="health">Health</option>
+                            <option value="sports">Sports</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="news-content" class="card-body">
+                    <div class="loader"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
