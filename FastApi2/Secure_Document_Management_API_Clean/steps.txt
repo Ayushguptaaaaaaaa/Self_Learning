@@ -1,0 +1,725 @@
+=============================================================================
+                SECURE DOCUMENT MANAGEMENT API - ACTIONABLE STEPS
+=============================================================================
+
+PROJECT: Build a mini Google Drive/Dropbox backend API
+
+TECH STACK: FastAPI + SQLAlchemy + SQLite + JWT Authentication
+
+=============================================================================
+                            PROJECT STRUCTURE
+=============================================================================
+
+Secure_Document_Management_API_Clean/
+├── .env                          # Secrets (JWT key, database URL)
+├── .gitignore                    # Git ignore file
+├── requirements.txt              # Python dependencies
+├── README.md                     # Documentation
+├── app.db                        # SQLite database (auto-created)
+├── uploads/                      # Uploaded files storage
+│
+├── app/
+│   ├── main.py                   # FastAPI app entry point
+│   ├── database.py               # Database connection
+│   ├── config.py                 # Load settings from .env
+│   │
+│   ├── models/                   # Database tables (SQLAlchemy)
+│   │   ├── user.py               # Users table
+│   │   ├── file.py               # Files table
+│   │   ├── folder.py             # Folders table
+│   │   ├── permission.py         # File permissions table
+│   │   └── api_key.py            # API keys table
+│   │
+│   ├── schemas/                  # Request/Response models (Pydantic)
+│   │   ├── user.py               # User schemas
+│   │   ├── auth.py               # Auth schemas (login, token)
+│   │   ├── file.py               # File schemas
+│   │   ├── folder.py             # Folder schemas
+│   │   └── permission.py         # Permission schemas
+│   │
+│   ├── routers/                  # API endpoints
+│   │   ├── auth.py               # /api/auth/* endpoints
+│   │   ├── files.py              # /api/files/* endpoints
+│   │   ├── folders.py            # /api/folders/* endpoints
+│   │   ├── sharing.py            # /api/files/*/share endpoints
+│   │   └── admin.py              # /api/admin/* endpoints
+│   │
+│   ├── core/                     # Core security & logic
+│   │   ├── security.py           # JWT, password hashing
+│   │   ├── dependencies.py       # get_current_user dependency
+│   │   └── permissions.py        # RBAC permission checks
+│   │
+│   └── utils/                    # Helper functions
+│       ├── file_handler.py       # Save/delete files
+│       └── validators.py         # File validation
+
+
+=============================================================================
+                        PHASE 1: AUTHENTICATION (Steps 1-6)
+=============================================================================
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 1: PROJECT SETUP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILES TO EDIT:
+  □ requirements.txt
+  □ .env
+
+TASKS:
+  1.1 Fill requirements.txt with dependencies
+  1.2 Create virtual environment: python -m venv .venv
+  1.3 Activate venv: .venv\Scripts\activate
+  1.4 Install packages: pip install -r requirements.txt
+  1.5 Fill .env with configuration
+  1.6 Verify: pip list (should see fastapi, sqlalchemy, etc.)
+
+WHAT YOU LEARN:
+  → Virtual environments isolate project dependencies
+  → .env stores secrets securely
+  → Never commit .env to git!
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 2: DATABASE CONNECTION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILES TO EDIT:
+  □ app/config.py
+  □ app/database.py
+
+TASKS:
+  2.1 Write app/config.py:
+      - Import pydantic_settings
+      - Create Settings class
+      - Load DATABASE_URL, JWT_SECRET_KEY from .env
+      - Create settings instance
+
+  2.2 Write app/database.py:
+      - Import sqlalchemy
+      - Create engine (connection to SQLite)
+      - Create SessionLocal (database session factory)
+      - Create Base class (all models inherit from this)
+      - Create get_db() dependency
+
+TEST:
+  Run: python -c "from app.database import engine; print(engine)"
+  Should print engine info without errors
+
+WHAT YOU LEARN:
+  → SQLAlchemy connects Python to databases
+  → Engine = database connection
+  → SessionLocal = database session for queries
+  → Base = parent class for all models
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 3: USER MODEL (DATABASE TABLE)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILES TO EDIT:
+  □ app/models/user.py
+  □ app/models/__init__.py
+
+TASKS:
+  3.1 Write app/models/user.py:
+      - Import Base from database.py
+      - Create User class (inherits Base)
+      - Add fields:
+          * id: Integer, primary_key
+          * email: String, unique, index
+          * password_hash: String (NOT plain password!)
+          * created_at: DateTime
+          * refresh_token: String, nullable
+
+  3.2 Write app/models/__init__.py:
+      - Import User model
+      - Export it
+
+  3.3 Create database tables:
+      - Add to end of database.py:
+        from app.models import User
+        Base.metadata.create_all(bind=engine)
+
+TEST:
+  Run: python -c "from app.database import engine; from app.models import User"
+  Check: app.db file should appear in project root
+
+WHAT YOU LEARN:
+  → Models define database table structure
+  → password_hash stores encrypted passwords (never plain!)
+  → create_all() creates tables from models
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 4: PASSWORD HASHING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILES TO EDIT:
+  □ app/core/security.py
+
+TASKS:
+  4.1 Write app/core/security.py:
+      - Import passlib
+      - Create pwd_context (bcrypt hashing)
+      - Write hash_password(password) function
+      - Write verify_password(plain, hashed) function
+
+TEST:
+  Run in Python:
+    from app.core.security import hash_password, verify_password
+    hashed = hash_password("test123")
+    print(hashed)  # Should be long random string
+    print(verify_password("test123", hashed))  # Should be True
+    print(verify_password("wrong", hashed))    # Should be False
+
+WHAT YOU LEARN:
+  → Never store plain passwords!
+  → Bcrypt is a secure hashing algorithm
+  → Hashing is one-way (can't reverse it)
+  → verify_password() checks if password matches
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 5: USER REGISTRATION ENDPOINT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILES TO EDIT:
+  □ app/schemas/auth.py
+  □ app/schemas/user.py
+  □ app/routers/auth.py
+  □ app/main.py
+
+TASKS:
+  5.1 Write app/schemas/auth.py:
+      - UserRegister schema (email, password)
+      - Validate email format
+      - Validate password length (min 8 chars)
+
+  5.2 Write app/schemas/user.py:
+      - UserResponse schema (id, email, created_at)
+      - NO password field!
+
+  5.3 Write app/routers/auth.py:
+      - Import FastAPI, Depends, HTTPException
+      - Create router
+      - POST /api/auth/register endpoint:
+          * Accept UserRegister
+          * Check if email already exists
+          * Hash password
+          * Create user in database
+          * Return UserResponse
+
+  5.4 Wire up in app/main.py:
+      - Import FastAPI
+      - Create app instance
+      - Import auth router
+      - Include router: app.include_router(auth.router)
+
+TEST:
+  Run: uvicorn app.main:app --reload
+  Go to: http://127.0.0.1:8000/docs
+  Try: POST /api/auth/register
+       Body: {"email": "test@example.com", "password": "test1234"}
+  Should return: user info with id
+
+WHAT YOU LEARN:
+  → Pydantic schemas validate input data
+  → Routers organize endpoints
+  → Check for duplicates before creating users
+  → Return responses WITHOUT passwords
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 6: JWT TOKEN GENERATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILES TO EDIT:
+  □ app/core/security.py (add functions)
+  □ app/schemas/auth.py (add schemas)
+
+TASKS:
+  6.1 Update app/core/security.py:
+      - Import jose (JWT library)
+      - Write create_access_token(user_id) function:
+          * Create payload: {"sub": user_id, "exp": expiry_time}
+          * Encode with JWT_SECRET_KEY
+          * Return token string
+
+      - Write decode_access_token(token) function:
+          * Decode token
+          * Return user_id
+          * Handle expired/invalid tokens
+
+  6.2 Update app/schemas/auth.py:
+      - Add UserLogin schema (email, password)
+      - Add Token schema (access_token, token_type)
+
+TEST:
+  Run in Python:
+    from app.core.security import create_access_token, decode_access_token
+    token = create_access_token(user_id=1)
+    print(token)  # Long string with dots
+    user_id = decode_access_token(token)
+    print(user_id)  # Should be 1
+
+WHAT YOU LEARN:
+  → JWT tokens = temporary "pass" to access protected routes
+  → Token contains user_id (encrypted)
+  → Token expires after 15 minutes
+  → Token is signed with secret key (can't be faked)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 7: USER LOGIN ENDPOINT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILES TO EDIT:
+  □ app/routers/auth.py (add endpoint)
+
+TASKS:
+  7.1 Update app/routers/auth.py:
+      - POST /api/auth/login endpoint:
+          * Accept UserLogin (email, password)
+          * Find user by email
+          * If not found → 404 error
+          * Verify password with verify_password()
+          * If wrong → 401 error
+          * Generate access token
+          * Return Token response
+
+TEST:
+  Run: uvicorn app.main:app --reload
+  Go to: http://127.0.0.1:8000/docs
+  1. Register user: POST /api/auth/register
+  2. Login: POST /api/auth/login
+     Body: {"email": "test@example.com", "password": "test1234"}
+  3. Should return: {"access_token": "...", "token_type": "bearer"}
+
+WHAT YOU LEARN:
+  → Login validates email + password
+  → Returns JWT token on success
+  → Token used for future authenticated requests
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 8: GET CURRENT USER (PROTECTED ROUTES)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILES TO EDIT:
+  □ app/core/dependencies.py
+  □ app/routers/auth.py (add endpoint)
+
+TASKS:
+  8.1 Write app/core/dependencies.py:
+      - Import Depends, HTTPException
+      - Write get_current_user() function:
+          * Extract token from Authorization header
+          * Decode token to get user_id
+          * Fetch user from database
+          * If not found → 401 error
+          * Return user object
+
+  8.2 Update app/routers/auth.py:
+      - GET /api/auth/me endpoint:
+          * Use Depends(get_current_user)
+          * Return current user info
+
+TEST:
+  1. Login and copy token
+  2. Go to /api/auth/me endpoint
+  3. Click "Authorize" button in Swagger
+  4. Paste token (without "Bearer")
+  5. Try endpoint → should return your user info
+
+WHAT YOU LEARN:
+  → Dependency injection = reusable logic
+  → get_current_user checks token before allowing access
+  → Protected routes require valid token
+
+
+=============================================================================
+                    PHASE 2: FILE OPERATIONS (Steps 9-12)
+=============================================================================
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 9: FILE & FOLDER MODELS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILES TO EDIT:
+  □ app/models/file.py
+  □ app/models/folder.py
+  □ app/models/__init__.py
+
+TASKS:
+  9.1 Write app/models/file.py:
+      - Create File model with fields:
+          * id, filename, stored_filename, file_path
+          * size_bytes, mime_type
+          * owner_id (ForeignKey to User)
+          * folder_id (ForeignKey to Folder, nullable)
+          * uploaded_at, share_token, share_expires_at
+
+  9.2 Write app/models/folder.py:
+      - Create Folder model with fields:
+          * id, name
+          * owner_id (ForeignKey to User)
+          * parent_id (ForeignKey to Folder, nullable for root)
+          * created_at
+
+  9.3 Update app/models/__init__.py:
+      - Import File, Folder
+
+  9.4 Recreate database:
+      - Delete app.db
+      - Run: python -c "from app.database import Base, engine; Base.metadata.create_all(engine)"
+
+WHAT YOU LEARN:
+  → Foreign keys link tables together
+  → Nullable fields (folder_id can be NULL = root)
+  → Relationships (one user has many files)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 10: FILE UPLOAD HELPERS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILES TO EDIT:
+  □ app/utils/file_handler.py
+  □ app/utils/validators.py
+
+TASKS:
+  10.1 Write app/utils/validators.py:
+       - validate_file_size(file, max_mb=100)
+       - validate_file_extension(filename, allowed_exts)
+       - Both raise HTTPException if invalid
+
+  10.2 Write app/utils/file_handler.py:
+       - save_upload_file(file) function:
+           * Generate unique filename (UUID + extension)
+           * Save to uploads/ folder
+           * Return (stored_filename, file_path, size_bytes, mime_type)
+
+       - delete_file(file_path) function:
+           * Delete file from disk
+
+TEST:
+  Run in Python:
+    from app.utils.validators import validate_file_extension
+    validate_file_extension("test.pdf", ["pdf", "png"])  # Should pass
+    validate_file_extension("test.exe", ["pdf", "png"])  # Should raise error
+
+WHAT YOU LEARN:
+  → Never trust user filenames (use UUID)
+  → Validate file size and type
+  → Store files with unique names
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 11: FILE UPLOAD ENDPOINT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILES TO EDIT:
+  □ app/schemas/file.py
+  □ app/routers/files.py
+  □ app/main.py
+
+TASKS:
+  11.1 Write app/schemas/file.py:
+       - FileUploadResponse schema
+       - FileResponse schema
+
+  11.2 Write app/routers/files.py:
+       - Create router
+       - POST /api/files/upload endpoint:
+           * Requires authentication (get_current_user)
+           * Accept file (UploadFile)
+           * Validate size and type
+           * Save file to disk
+           * Save metadata to database
+           * Return FileUploadResponse
+
+  11.3 Update app/main.py:
+       - Include files router
+
+TEST:
+  1. Login and get token
+  2. Authorize in Swagger
+  3. POST /api/files/upload
+  4. Select a PDF file
+  5. Should return file info
+  6. Check uploads/ folder → file should be there
+
+WHAT YOU LEARN:
+  → File uploads use multipart/form-data
+  → Save file to disk + metadata to database
+  → Always validate before saving
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 12: FILE DOWNLOAD & DELETE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILES TO EDIT:
+  □ app/routers/files.py (add endpoints)
+
+TASKS:
+  12.1 Update app/routers/files.py:
+       - GET /api/files/{file_id}:
+           * Requires authentication
+           * Fetch file metadata from database
+           * Check if user owns file
+           * Return file info
+
+       - GET /api/files/{file_id}/download:
+           * Requires authentication
+           * Check ownership
+           * Stream file using FileResponse
+
+       - DELETE /api/files/{file_id}:
+           * Requires authentication
+           * Check if user is owner
+           * Delete from database
+           * Delete from disk
+
+TEST:
+  1. Upload a file → note the file_id
+  2. GET /api/files/{file_id} → see metadata
+  3. GET /api/files/{file_id}/download → file downloads
+  4. DELETE /api/files/{file_id} → file deleted
+
+WHAT YOU LEARN:
+  → FileResponse streams files efficiently
+  → Always check ownership before actions
+  → Delete from both database AND disk
+
+
+=============================================================================
+                  PHASE 3: PERMISSIONS & SHARING (Steps 13-15)
+=============================================================================
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 13: PERMISSION MODEL & RBAC
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILES TO EDIT:
+  □ app/models/permission.py
+  □ app/core/permissions.py
+
+TASKS:
+  13.1 Write app/models/permission.py:
+       - Create Permission model:
+           * file_id (ForeignKey to File)
+           * user_id (ForeignKey to User)
+           * role (Enum: owner, editor, viewer)
+           * granted_at
+
+  13.2 Write app/core/permissions.py:
+       - check_file_permission(user, file, required_role) function:
+           * Check if user has permission
+           * Role hierarchy: owner > editor > viewer
+           * Return True/False
+
+  13.3 Recreate database (delete app.db and recreate)
+
+WHAT YOU LEARN:
+  → RBAC = Role-Based Access Control
+  → Different roles = different permissions
+  → Check permissions before every action
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 14: FILE SHARING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILES TO EDIT:
+  □ app/schemas/permission.py
+  □ app/routers/sharing.py
+  □ app/main.py
+
+TASKS:
+  14.1 Write app/schemas/permission.py:
+       - ShareFileRequest schema (user_email, role)
+       - PermissionResponse schema
+
+  14.2 Write app/routers/sharing.py:
+       - POST /api/files/{file_id}/share:
+           * Check if current user is owner
+           * Find user by email
+           * Create Permission record
+           * Return success
+
+       - GET /api/files/{file_id}/permissions:
+           * List all users with access
+
+       - DELETE /api/files/{file_id}/permissions/{user_id}:
+           * Revoke access
+
+  14.3 Update app/main.py:
+       - Include sharing router
+
+TEST:
+  1. User A uploads file
+  2. User A shares with User B (viewer role)
+  3. User B can download but not delete
+
+WHAT YOU LEARN:
+  → Sharing creates permission records
+  → Only owner can share files
+  → Roles control what users can do
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 15: PUBLIC SHARE LINKS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILES TO EDIT:
+  □ app/routers/sharing.py (add endpoints)
+
+TASKS:
+  15.1 Update app/routers/sharing.py:
+       - POST /api/files/{file_id}/share-link:
+           * Generate random token (UUID)
+           * Set expiry (7 days)
+           * Save to database
+           * Return public URL
+
+       - GET /api/shared/{share_token}:
+           * NO AUTHENTICATION REQUIRED
+           * Validate token
+           * Check if expired
+           * Stream file
+
+       - DELETE /api/files/{file_id}/share-link:
+           * Revoke link (clear token)
+
+TEST:
+  1. Create share link for file
+  2. Copy the token
+  3. Open browser (logged out)
+  4. Go to /api/shared/{token}
+  5. File should download (no login!)
+
+WHAT YOU LEARN:
+  → Public links bypass authentication
+  → Tokens are random (can't be guessed)
+  → Expiry ensures links don't work forever
+
+
+=============================================================================
+                        PHASE 4: FOLDERS (Step 16)
+=============================================================================
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 16: FOLDER CRUD OPERATIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILES TO EDIT:
+  □ app/schemas/folder.py
+  □ app/routers/folders.py
+  □ app/main.py
+
+TASKS:
+  16.1 Write app/schemas/folder.py:
+       - FolderCreate schema (name, parent_id)
+       - FolderResponse schema
+
+  16.2 Write app/routers/folders.py:
+       - POST /api/folders (create)
+       - GET /api/folders/{folder_id} (list contents)
+       - PUT /api/folders/{folder_id} (rename)
+       - DELETE /api/folders/{folder_id} (delete)
+
+  16.3 Update app/routers/files.py:
+       - Allow folder_id in upload
+
+  16.4 Update app/main.py:
+       - Include folders router
+
+TEST:
+  1. Create folder "Documents"
+  2. Upload file to that folder
+  3. List folder contents
+  4. Rename folder
+  5. Delete folder
+
+WHAT YOU LEARN:
+  → Nested folders (parent_id)
+  → Files belong to folders
+  → Cascade delete (delete folder = delete files)
+
+
+=============================================================================
+                    OPTIONAL: ADVANCED FEATURES (Steps 17-18)
+=============================================================================
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 17: REFRESH TOKENS & LOGOUT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILES TO EDIT:
+  □ app/core/security.py (add function)
+  □ app/routers/auth.py (add endpoints)
+
+TASKS:
+  17.1 Update app/core/security.py:
+       - create_refresh_token(user_id) (7 days expiry)
+
+  17.2 Update login endpoint:
+       - Return both access + refresh tokens
+       - Save refresh_token to database
+
+  17.3 Add POST /api/auth/refresh endpoint:
+       - Accept refresh_token
+       - Generate new access_token
+
+  17.4 Add POST /api/auth/logout endpoint:
+       - Clear refresh_token
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 18: POLISH & EXTRAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TASKS:
+  18.1 Add file search: GET /api/files/search?q=query
+  18.2 Add storage quota check (1GB per user)
+  18.3 Add admin endpoints (list users, stats)
+  18.4 Improve error messages
+  18.5 Add CORS middleware for frontend
+
+
+=============================================================================
+                            RUNNING THE PROJECT
+=============================================================================
+
+COMMANDS:
+  1. Activate venv: .venv\Scripts\activate
+  2. Run server: uvicorn app.main:app --reload
+  3. Open docs: http://127.0.0.1:8000/docs
+
+WORKFLOW:
+  → Register user
+  → Login (get token)
+  → Authorize in Swagger (paste token)
+  → Upload file
+  → Share with another user
+  → Create share link
+  → Download file
+
+
+=============================================================================
+                              COMPLETED! 🎉
+=============================================================================
+
+After finishing, you'll have:
+  ✅ JWT authentication system
+  ✅ File upload/download with streaming
+  ✅ Folder organization
+  ✅ Role-based permissions (Owner/Editor/Viewer)
+  ✅ File sharing with users
+  ✅ Public share links with expiry
+  ✅ Secure password hashing
+  ✅ Production-ready API structure
+
+This is a PORTFOLIO-WORTHY PROJECT! 🚀
